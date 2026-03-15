@@ -21,6 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.virtual.tensorhub.ui.*
 import com.virtual.tensorhub.ui.loadVirtualLocation
+import java.io.File
 
 class MainActivity : ComponentActivity() {
 
@@ -39,6 +40,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val presetFile = File(filesDir, "preset_routes.json")
+        if (!presetFile.exists()) presetFile.writeText("[]")
+
+        AppContextHolder.init(this)
 
         // ✅ 2. 启动 Compose 界面
         setContent {
@@ -59,6 +65,8 @@ class MainActivity : ComponentActivity() {
                         composable("map") { MapScreen(navController = navController) }
                         composable("addressSearch") { AddressSearchScreen(navController = navController) }
                         composable("history") { HistoryScreen(navController = navController) }
+                        composable("route_simulator") { RouteSimulatorScreen(navController = navController) }
+                        composable("map_draw") { MapDrawScreen(navController) }
                     }
                 }
             }

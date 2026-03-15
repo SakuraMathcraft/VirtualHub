@@ -7,12 +7,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -37,6 +44,8 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 
+import com.amap.api.services.help.Tip
+
 @Composable
 fun AddressSearchScreen(
     navController: NavController
@@ -45,292 +54,263 @@ fun AddressSearchScreen(
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var tipList by remember { mutableStateOf(listOf<Tip>()) }
-    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF6A11CB), Color(0xFF2575FC))
-                )
-            )
-            .padding(top = statusBarPadding + 12.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-            modifier = Modifier.verticalScroll(rememberScrollState())
-        ) {
-            // ===== 搜索栏 =====
-            Row(
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 4.dp)
-                    .defaultMinSize(minHeight = 52.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .background(MaterialTheme.colorScheme.background) // Match background or slightly translucent
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                // 返回按钮
-                Surface(
-                    modifier = Modifier.size(46.dp),
-                    color = Color.White.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(50),
-                    tonalElevation = 4.dp,
-                    shadowElevation = 6.dp
+                 Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "返回",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.width(10.dp))
-
-                // 输入框 + 搜索按钮
-                Row(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(40.dp))
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = {
-                            query = it
-                            if (it.length >= 2) {
-                                // 🔄 启动协程实时搜索
-                                scope.launch {
-                                    val tips = searchTipsOnline(query, "a03af5f20576f26a43f4b3b6249c2066")
-                                    withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                        tipList = tips.map { (name, latlng) ->
-                                            Tip(name = name, point = LatLonPoint(latlng.first, latlng.second))
-                                        }
-                                    }
-                                }
-                            } else tipList = emptyList()
-                        },
-                        placeholder = {
-                            Text("输入地址/POI/地标", color = Color.White.copy(alpha = 0.6f))
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            cursorColor = Color.White,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        textStyle = TextStyle(fontSize = 16.sp, color = Color.White),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 6.dp),
-                        singleLine = true
-                    )
-
-                    // 搜索按钮
+                    // Search Bar
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(30.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(Color(0xFF6A11CB), Color(0xFF2575FC))
-                                )
+                            .weight(1f)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)), // Gray-ish
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(16.dp)
                             )
-                            .clickable {
-                                if (query.isNotBlank()) {
-                                    if (!isNetworkAvailable(context)) {
-                                        Toast.makeText(context, "请检查网络连接", Toast.LENGTH_SHORT).show()
-                                        // 👉 跳转系统网络设置界面（可选）
-                                        context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
-                                        return@clickable
-                                    }
-
-                                    scope.launch {
-                                        try {
-                                            val tips = searchTipsOnline(query, "a03af5f20576f26a43f4b3b6249c2066")
-                                            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                if (tips.isEmpty()) {
-                                                    Toast.makeText(context, "未找到相关结果", Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                    tipList = tips.map { (name, latlng) ->
-                                                        Tip(name = name, point = LatLonPoint(latlng.first, latlng.second))
-                                                    }
-                                                }
-                                            }
-                                        } catch (e: Exception) {
-                                            e.printStackTrace()
-                                            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                Toast.makeText(context, "请求失败，请检查网络或API Key", Toast.LENGTH_SHORT).show()
+                            Spacer(modifier = Modifier.width(6.dp))
+                            BasicTextField(
+                                value = query,
+                                onValueChange = { newValue ->
+                                    query = newValue
+                                    if (newValue.isNotEmpty()) {
+                                        // 触发搜索
+                                        val inputQuery = com.amap.api.services.help.InputtipsQuery(newValue, "")
+                                        val inputTips = com.amap.api.services.help.Inputtips(context, inputQuery)
+                                        inputTips.setInputtipsListener { list, rCode ->
+                                            if (rCode == 1000 && list != null) {
+                                                tipList = list
                                             }
                                         }
+                                        inputTips.requestInputtipsAsyn()
+                                    } else {
+                                        tipList = emptyList()
                                     }
-                                } else {
-                                    Toast.makeText(context, "请输入搜索内容", Toast.LENGTH_SHORT).show()
+                                },
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 17.sp
+                                ),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.weight(1f),
+                                decorationBox = { innerTextField ->
+                                    if (query.isEmpty()) {
+                                        Text(
+                                            "Search for a place or address",
+                                            color = Color.Gray,
+                                            fontSize = 17.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                            if (query.isNotEmpty()) {
+                                IconButton(
+                                    onClick = { query = ""; tipList = emptyList() },
+                                    modifier = Modifier.size(16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Cancel, // Filled circle X
+                                        contentDescription = "Clear",
+                                        tint = Color.Gray
+                                    )
                                 }
                             }
-                            .padding(horizontal = 18.dp, vertical = 8.dp)
-                    ) {
-                        Text("搜索", color = Color.White)
+                        }
                     }
+
+                    // Cancel / Back Button
+                    Text(
+                        text = "Cancel",
+                        color = MaterialTheme.colorScheme.primary, // Apple Blue
+                        fontSize = 17.sp,
+                        modifier = Modifier
+                            .clickable { navController.popBackStack() }
+                            .padding(4.dp)
+                    )
                 }
             }
-
-            // ===== 搜索结果列表 =====
-            if (tipList.isNotEmpty()) {
-                GlassCard {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "搜索结果",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+             verticalArrangement = Arrangement.spacedBy(0.dp) // Apple lists have dividers
+        ) {
+            if (tipList.isEmpty() && query.isEmpty()) {
+                 item {
+                     // 🚀 新增：热门商圈推荐（恢复原来卡片样式并美化）
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp)
+                    ) {
+                         Text(
+                            text = "Popular Areas",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 12.dp)
                         )
-                        Spacer(Modifier.height(10.dp))
-                        tipList.forEach { tip ->
-                            if (tip.point != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.White.copy(alpha = 0.1f))
-                                        .border(
-                                            1.dp,
-                                            Color.White.copy(alpha = 0.3f),
-                                            RoundedCornerShape(16.dp)
-                                        )
-                                        .clickable {
-                                            val point = tip.point
-                                            if (point != null) {
-                                                val lat = point.latitude
-                                                val lng = point.longitude
-
-                                                saveVirtualLocation(context, lat, lng)
-                                                val intent = Intent(context, com.virtual.tensorhub.mock.MockLocationService::class.java).apply {
-                                                    action = com.virtual.tensorhub.mock.MockLocationService.ACTION_START
-                                                    putExtra(com.virtual.tensorhub.mock.MockLocationService.EXTRA_LAT, lat)
-                                                    putExtra(com.virtual.tensorhub.mock.MockLocationService.EXTRA_LON, lng)
-                                                }
-                                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                                                    context.startForegroundService(intent)
-                                                else
-                                                    context.startService(intent)
-
-                                                // ✅ 自动保存到历史记录
-                                                val groups = loadGroups(context).toMutableList()
-                                                val defaultGroup = groups.find { it.name == "历史记录" } ?: GroupItem("历史记录", mutableListOf())
-                                                defaultGroup.locations.add(
-                                                    HistoryItem(
-                                                        name = tip.name,
-                                                        latitude = lat,
-                                                        longitude = lng
+                        
+                        // 预设热门地点
+                        val hotSpots = listOf(
+                            "春熙路" to LatLng(30.6586, 104.0648),
+                            "太古里" to LatLng(30.6555, 104.0799),
+                            "天府广场" to LatLng(30.6574, 104.0658), 
+                            "宽窄巷子" to LatLng(30.6635, 104.0533),
+                            "锦里" to LatLng(30.6468, 104.0494),
+                            "环球中心" to LatLng(30.5695, 104.0628) 
+                        )
+                        
+                         // Grid layout manually
+                         hotSpots.chunked(2).forEach { row ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                row.forEach { (name, latLng) ->
+                                     Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(80.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(
+                                                Brush.linearGradient(
+                                                    colors = listOf(
+                                                        MaterialTheme.colorScheme.primary.copy(alpha=0.7f),
+                                                        MaterialTheme.colorScheme.tertiary.copy(alpha=0.7f)
                                                     )
                                                 )
-                                                if (!groups.contains(defaultGroup)) groups.add(defaultGroup)
-                                                saveGroups(context, groups)
-
-                                                reverseGeocode(context, lat, lng) { addr ->
-                                                    Toast.makeText(context, "已设置：$addr", Toast.LENGTH_SHORT).show()
-                                                }
-
-                                                navController.previousBackStackEntry
-                                                    ?.savedStateHandle
-                                                    ?.set("pickedLocation", LatLng(lat, lng))
-                                                navController.popBackStack()
-                                            }
-                                        }
-                                        .padding(12.dp)
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = tip.name ?: "未知名称",
-                                            color = Color.White,
-                                            style = MaterialTheme.typography.bodyLarge
-                                        )
-                                        if (!tip.address.isNullOrEmpty()) {
-                                            Text(
-                                                text = tip.address,
-                                                color = Color.White.copy(alpha = 0.7f),
-                                                style = MaterialTheme.typography.bodySmall
                                             )
-                                        }
+                                            .clickable {
+                                                 navController.previousBackStackEntry
+                                                    ?.savedStateHandle
+                                                    ?.set("pickedLocation", latLng)
+                                                  saveHistory(context, name, "Popular Spot", latLng)
+                                                  navController.popBackStack()
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = name,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 16.sp
+                                        )
                                     }
                                 }
-                                Spacer(Modifier.height(8.dp))
+                                if (row.size == 1) { // Fill space if odd number
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
                             }
-                        }
+                         }
                     }
-                }
-            }
-
-            // ===== 热门位置 =====
-            GlassCard {
-                Column(Modifier.padding(20.dp)) {
-                    Text(
-                        "热门位置",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    val hotList = listOf("油砖", "成都理工大学", "纽约", "天安门", "故宫", "颐和园", "成都春熙路", "天府大道林心如", "必吃榜")
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                 
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 40.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        hotList.forEach { name ->
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(Color.White.copy(alpha = 0.1f))
-                                    .border(
-                                        1.dp,
-                                        Color.White.copy(alpha = 0.3f),
-                                        RoundedCornerShape(20.dp)
-                                    )
-                                    .clickable {
-                                        scope.launch {
-                                            val tips = searchTipsOnline(name, "a03af5f20576f26a43f4b3b6249c2066")
-                                            withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                if (tips.isEmpty()) {
-                                                    Toast.makeText(context, "未找到相关结果", Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                    tipList = tips.map { (tName, latlng) ->
-                                                        Tip(name = tName, point = LatLonPoint(latlng.first, latlng.second))
-                                                    }
-                                                }
-                                            }
-                                            query = name
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text(name, color = Color.White)
-                            }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                             Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = null,
+                                tint = Color.Gray.copy(alpha = 0.3f),
+                                modifier = Modifier.size(60.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Search for locations", color = Color.Gray)
                         }
                     }
-                }
-            }
+                 }
+            } else {
+                items(tipList) { tip ->
+                    // 过滤掉没有坐标的点
+                    if (tip.point != null) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    // 保存选中位置 并返回
+                                    val point = tip.point
+                                    val latLng = LatLng(point.latitude, point.longitude)
+                                    
+                                    // 1. 保存到 navController
+                                    navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("pickedLocation", latLng)
 
-            // ===== 搜索提示 =====
-            GlassCard {
-                Column(Modifier.padding(20.dp)) {
-                    Text(
-                        "使用提示",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "• 输入地名或POI将自动联想\n" +
-                                "• 点击结果可立即设置虚拟定位\n" +
-                                "• 支持中文模糊搜索",
-                        color = Color.White.copy(alpha = 0.85f),
-                        style = MaterialTheme.typography.bodySmall.copy(lineHeight = 20.sp)
-                    )
+                                    // 2. 保存到历史记录
+                                    saveHistory(context, tip.name, tip.district, latLng)
+
+                                    navController.popBackStack()
+                                }
+                                .padding(vertical = 12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocationOn,
+                                        contentDescription = null,
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = tip.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (!tip.district.isNullOrEmpty()) {
+                                        Text(
+                                            text = tip.district,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 48.dp), // Indented divider
+                            color = Color.Gray.copy(alpha = 0.2f)
+                        )
+                    }
                 }
             }
         }
@@ -385,16 +365,6 @@ suspend fun searchTipsOnline(
     }
 }
 
-data class Tip(
-    var name: String = "",
-    var address: String = "",
-    var point: LatLonPoint? = null
-)
-
-data class LatLonPoint(
-    val latitude: Double,
-    val longitude: Double
-)
 fun isNetworkAvailable(context: android.content.Context): Boolean {
     val connectivityManager =
         context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -402,5 +372,12 @@ fun isNetworkAvailable(context: android.content.Context): Boolean {
     val actNw = connectivityManager.getNetworkCapabilities(network) ?: return false
     return actNw.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
 }
-
-
+fun safeLoadGroups(context: android.content.Context): MutableList<GroupItem> {
+    return try {
+        // 调用原始加载逻辑（若异常直接捕获）
+        loadGroups(context)?.toMutableList() ?: mutableListOf()
+    } catch (e: Exception) {
+        Log.e("AddressSearch", "首次加载历史记录文件失败: ${e.message}")
+        mutableListOf()
+    }
+}

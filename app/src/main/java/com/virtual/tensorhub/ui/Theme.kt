@@ -6,34 +6,69 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+
+// 🎨 Apple Style Colors
+val AppleBlue = Color(0xFF007AFF)
+val AppleGray = Color(0xFF8E8E93)
+val AppleLightGray = Color(0xFFE5E5EA) // System Gray 6
+val AppleBackgroundLight = Color(0xFFF2F2F7) // Grouped Background
+val AppleBackgroundDark = Color(0xFF000000)
+val AppleSurfaceLight = Color(0xFFFFFFFF)
+val AppleSurfaceDark = Color(0xFF1C1C1E) // System Gray 6 Dark
 
 // 🌞 亮色模式配色
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF7B2FF7),
-    secondary = Color(0xFF00C6FF),
-    background = Color(0xFFF5F7FA),
-    surface = Color(0xFFFFFFFF),
+    primary = AppleBlue,
+    secondary = AppleBlue,
+    background = AppleBackgroundLight,
+    surface = AppleSurfaceLight,
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = Color(0xFF1C1C1C),
-    onSurface = Color(0xFF1C1C1C)
+    onBackground = Color.Black,
+    onSurface = Color.Black
 )
 
 // 🌙 暗色模式配色
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFBB86FC),
-    secondary = Color(0xFF03DAC6),
-    background = Color(0xFF0F1724),
-    surface = Color(0xFF1A1A1A),
-    onPrimary = Color.Black,
-    onSecondary = Color.Black,
-    onBackground = Color(0xFFE0E0E0),
-    onSurface = Color(0xFFE0E0E0)
+    primary = AppleBlue,
+    secondary = AppleBlue,
+    background = AppleBackgroundDark,
+    surface = AppleSurfaceDark,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onBackground = Color.White,
+    onSurface = Color.White
+)
+
+val AppleTypography = androidx.compose.material3.Typography(
+    headlineLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Bold,
+        fontSize = 34.sp,
+        letterSpacing = (-0.5).sp
+    ),
+    headlineMedium = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 24.sp,
+        letterSpacing = (-0.5).sp
+    ),
+    bodyLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = FontWeight.Normal,
+        fontSize = 17.sp,
+        letterSpacing = (-0.4).sp
+    )
 )
 
 /**
  * TensorHub 全局主题
  * @param darkTheme 是否启用暗色模式（可手动控制）
+ * @param content 内容
  */
 @Composable
 fun TensorHubTheme(
@@ -44,7 +79,7 @@ fun TensorHubTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = androidx.compose.material3.Typography(),
+        typography = AppleTypography,
         content = content
     )
 }

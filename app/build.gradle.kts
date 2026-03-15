@@ -44,9 +44,19 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.geometry)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.text)
     // -------- Compose 官方 BOM 版本控制 --------
     val composeBom = platform("androidx.compose:compose-bom:2024.10.00")
     implementation(composeBom)
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+
+    implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("androidx.navigation:navigation-compose:2.7.7")
 

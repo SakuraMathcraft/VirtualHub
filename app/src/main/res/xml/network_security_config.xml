@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 允许访问 http:// 和 HTTPS 不受信任证书的调试环境 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">amap.com</domain>
+        <domain includeSubdomains="true">autonavi.com</domain>
+    </domain-config>
+</network-security-config>

@@ -6,10 +6,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
@@ -46,8 +49,11 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import com.virtual.tensorhub.R
@@ -63,17 +69,39 @@ fun AboutScreen(onBack: () -> Unit) {
         visible = true
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF6A11CB), Color(0xFF2575FC))
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                 IOSButton(
+                    onClick = onBack,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = CircleShape,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack, // Or Icons.AutoMirrored.Filled.ArrowBack if preferred
+                        contentDescription = "Back",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "About",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
                 )
-            )
-            .systemBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-    ) {
+            }
+        }
+    ) { paddingValues ->
         // 🌟 整个内容加入渐入 + 弹性缩放动画
         AnimatedVisibility(
             visible = visible,
@@ -89,349 +117,91 @@ fun AboutScreen(onBack: () -> Unit) {
                     scaleOut(
                         targetScale = 0.9f,
                         animationSpec = tween(250)
-                    )
+                    ),
+             modifier = Modifier.padding(paddingValues)
         ) {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // 顶部信息卡（App 图标 + 简介）
-                GlassCard {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "App Icon",
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(
-                                    Brush.radialGradient(
-                                        listOf(Color(0xFF8E2DE2), Color(0xFF4A00E0))
-                                    )
-                                )
-                                .padding(12.dp)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            "虚拟定位",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Color.White
-                        )
-                        Text(
-                            "Version 1.0.0",
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            "一款功能强大的虚拟定位工具，支持地图快速选点、SWPU快速选择与地址搜索，为您的位置服务提供便捷解决方案。",
-                            color = Color.White.copy(alpha = 0.9f),
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Spacer(Modifier.height(18.dp))
-
-                        var isChecking by remember { mutableStateOf(false) }
-                        var isLatest by remember { mutableStateOf(false) }
-
-                        GlassButtonDynamic(
-                            text = if (isLatest) "已是最新版本" else "检查更新",
-                            icon = Icons.Default.Refresh,
-                            isLoading = isChecking,
-                            success = isLatest,
-                        ) {
-                            if (!isChecking && !isLatest) {
-                                isChecking = true
-                                scope.launch {
-                                    kotlinx.coroutines.delay(2000)
-                                    isChecking = false
-                                    isLatest = true
-                                    // 3 秒后恢复初始状态
-                                    kotlinx.coroutines.delay(3000)
-                                    isLatest = false
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 开发者信息卡
-                GlassCard {
-                    Column(Modifier.padding(20.dp)) {
-                        Text(
-                            "开发者信息",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        InfoRow("团队", "TensorHub Dev Team")
-                        InfoRow("邮箱", "support@tensorhub.com")
-                        InfoRow("官网", "www.tensorhub.com")
-                        InfoRow("开源地址", "github.com/tensorhub")
-                    }
-                }
-
-                // 更多应用
-                GlassCard {
-                    Column(Modifier.padding(20.dp)) {
-                        Text(
-                            "更多应用",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(Modifier.height(14.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                AppCard(
-                                    iconRes = R.drawable.ic_tensorcloud,
-                                    name = "TensorCloud",
-                                    desc = "云端存储与协作平台",
-                                    bgColor = Color(0xFF4A90E2),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                AppCard(
-                                    iconRes = R.drawable.ic_tensornote,
-                                    name = "TensorNote",
-                                    desc = "智能笔记与知识管理",
-                                    bgColor = Color(0xFFFF9800),
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                AppCard(
-                                    iconRes = R.drawable.ic_tensorfit,
-                                    name = "TensorFit",
-                                    desc = "健康运动追踪应用",
-                                    bgColor = Color(0xFF4CAF50),
-                                    modifier = Modifier.weight(1f)
-                                )
-                                AppCard(
-                                    iconRes = R.drawable.ic_tensorpay,
-                                    name = "TensorPay",
-                                    desc = "安全便捷的支付工具",
-                                    bgColor = Color(0xFFFF4081),
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // 优化建议卡
-                var expanded by remember { mutableStateOf(false) }
-                var feedbackText by remember { mutableStateOf("") }
-
-                // -------- 🌟 功能与 UI 优化建议卡 --------
-                GlassCard(
+                IOSGlassCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // 顶部点击区域
-                        Column(
+                        // App Icon Placeholder
+                        Box(
                             modifier = Modifier
-                                .bounceClick { expanded = !expanded }
-                                .fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                                .size(80.dp)
+                                .shadow(10.dp, RoundedCornerShape(22.dp))
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(MaterialTheme.colorScheme.primary) // App Color
+                                .border(1.dp, Color.White.copy(0.2f), RoundedCornerShape(22.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("功能与 UI 优化建议", color = Color.White)
-                            Text(
-                                if (expanded) "点击可收起输入框" else "点击提交您的使用体验与改进建议",
-                                color = Color.White.copy(alpha = 0.7f),
-                                style = MaterialTheme.typography.bodySmall
+                             Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(40.dp)
                             )
                         }
 
-                        // 下方弹出输入框（顺序结构 → 在标题下方弹出，不遮挡）
-                        AnimatedVisibility(
-                            visible = expanded,
-                            enter = fadeIn(tween(250)) + expandVertically(
-                                spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = 260f
-                                )
-                            ),
-                            exit = fadeOut(tween(250)) + shrinkVertically(
-                                spring(
-                                    dampingRatio = Spring.DampingRatioLowBouncy,
-                                    stiffness = 180f
-                                )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "TensorHub",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold
                             )
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 12.dp)
-                            ) {
-                                // 玻璃圆角输入框
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .padding(1.dp)
-                                ) {
-                                    OutlinedTextField(
-                                        value = feedbackText,
-                                        onValueChange = { feedbackText = it },
-                                        placeholder = {
-                                            Column {
-                                                Text(
-                                                    "例如：UI太丑了，求作者优化…",
-                                                    color = Color.White.copy(alpha = 0.6f),
-                                                    style = MaterialTheme.typography.bodySmall
-                                                )
-                                                Text(
-                                                    "(请发送到 2245924824@qq.com)",
-                                                    color = Color.White.copy(alpha = 0.4f),
-                                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
-                                                )
-                                            }
-                                        },
-                                        singleLine = false,
-                                        maxLines = 4,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(Color.Transparent)
-                                            .padding(2.dp),
-                                        shape = RoundedCornerShape(16.dp),
-                                        colors = TextFieldDefaults.colors(
-                                            focusedContainerColor = Color.Transparent,
-                                            unfocusedContainerColor = Color.Transparent,
-                                            disabledContainerColor = Color.Transparent,
-                                            focusedIndicatorColor = Color.White.copy(alpha = 0.4f),
-                                            unfocusedIndicatorColor = Color.White.copy(alpha = 0.2f),
-                                            cursorColor = Color.White,
-                                            focusedTextColor = Color.White,
-                                            unfocusedTextColor = Color.White,
-                                            focusedPlaceholderColor = Color.White.copy(alpha = 0.5f),
-                                            unfocusedPlaceholderColor = Color.White.copy(alpha = 0.5f)
-                                        )
-                                    )
-                                }
-
-                                Spacer(Modifier.height(12.dp))
-
-                                // 居中发送按钮（纸飞机图标）
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    GlassButton(
-                                        text = "发送反馈",
-                                        icon = Icons.Default.Send,
-                                        isLoading = false
-                                    ) {
-                                        if (feedbackText.isNotBlank()) {
-                                            try {
-                                                // ---------- 🌟 智能检测邮箱环境 ----------
-                                                val gmailIntent = android.content.Intent(
-                                                    android.content.Intent.ACTION_SENDTO,
-                                                    android.net.Uri.parse("mailto:2245924824@qq.com")
-                                                ).apply {
-                                                    setPackage("com.google.android.gm")  // Gmail
-                                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "TensorHub 功能与 UI 优化建议")
-                                                    putExtra(android.content.Intent.EXTRA_TEXT, feedbackText)
-                                                }
-
-                                                val qqIntent = android.content.Intent(
-                                                    android.content.Intent.ACTION_SENDTO,
-                                                    android.net.Uri.parse("mailto:2245924824@qq.com")
-                                                ).apply {
-                                                    setPackage("com.tencent.androidqqmail")  // QQ 邮箱
-                                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "TensorHub 功能与 UI 优化建议")
-                                                    putExtra(android.content.Intent.EXTRA_TEXT, feedbackText)
-                                                }
-
-                                                val pm = context.packageManager
-                                                when {
-                                                    pm.resolveActivity(gmailIntent, 0) != null -> {
-                                                        context.startActivity(gmailIntent)
-                                                        Toast.makeText(context, "正在打开 Gmail...", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                    pm.resolveActivity(qqIntent, 0) != null -> {
-                                                        context.startActivity(qqIntent)
-                                                        Toast.makeText(context, "正在打开 QQ 邮箱...", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                    else -> {
-                                                        // 如果都没有安装，就退回系统默认处理
-                                                        val fallback = android.content.Intent(
-                                                            android.content.Intent.ACTION_SENDTO,
-                                                            android.net.Uri.parse("mailto:2245924824@qq.com")
-                                                        ).apply {
-                                                            putExtra(android.content.Intent.EXTRA_SUBJECT, "TensorHub 功能与 UI 优化建议")
-                                                            putExtra(android.content.Intent.EXTRA_TEXT, feedbackText)
-                                                        }
-                                                        context.startActivity(fallback)
-                                                        Toast.makeText(context, "已打开默认邮件应用", Toast.LENGTH_SHORT).show()
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "未找到可用的邮件客户端", Toast.LENGTH_SHORT).show()
-                                            }
-
-                                            feedbackText = ""
-                                            expanded = false
-                                        } else {
-                                            Toast.makeText(context, "请输入反馈内容", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            }
+                            Text(
+                                "Virtual Location Simulator",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                             Text(
+                                "v1.0.0 (Beta)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray
+                            )
                         }
                     }
                 }
 
-                // 底部版权卡
-                Text(
-                    "© 2025 TensorHub. All rights reserved.\nMade with ❤️ for better mobile experience",
-                    color = Color.White.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(bottom = 20.dp, top = 6.dp)
-                )
-            }
-        }
-
-        // 返回按钮
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 4.dp)
-                .size(46.dp),
-            color = Color.White.copy(alpha = 0.15f),
-            shape = RoundedCornerShape(50),
-            tonalElevation = 4.dp,
-            shadowElevation = 6.dp
-        ) {
-            IconButton(onClick = {
-                scope.launch {
-                    visible = false
-                    kotlinx.coroutines.delay(300) // 与 exit 动画时间匹配
-                    onBack()                     // 动画播放完再返回
+                // 功能介绍
+                IOSListGroup(title = "Information") {
+                    ListItem(
+                        headlineContent = { Text("Developer") },
+                        supportingContent = { Text("Mathcraft") },
+                        leadingContent = { Icon(Icons.Default.Info, null) }
+                    )
+                    HorizontalDivider(color = Color.LightGray.copy(alpha=0.2f))
+                     ListItem(
+                        headlineContent = { Text("Contact") },
+                        supportingContent = { Text("https://github.com/Septemc/TensorHubCommunity") },
+                        leadingContent = { Icon(Icons.AutoMirrored.Filled.Send, null) }
+                    )
                 }
-            }) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "返回",
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
+                
+                // Disclaimer
+                 IOSListGroup(title = "Disclaimer") {
+                    Text(
+                        text = "This application is for educational and testing purposes only. Please do not use it for illegal activities. The developer assumes no responsibility for any misuse.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                 }
+                 
+                  
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -615,6 +385,3 @@ fun GlassButtonDynamic(
         }
     }
 }
-
-
-

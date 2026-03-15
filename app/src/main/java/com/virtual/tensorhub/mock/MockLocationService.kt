@@ -54,6 +54,12 @@ class MockLocationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // ✅ 防止系统重启 Service 时传入空 Intent 导致逻辑中断
+        if (intent == null) {
+            android.util.Log.w("MockLocationService", "Service 重启，intent == null，自动恢复上次状态")
+            if (running) handler.post(tick)
+            return START_STICKY
+        }
         when (intent?.action) {
             ACTION_START -> {
                 val lat = intent.getDoubleExtra(EXTRA_LAT, 0.0)
@@ -72,18 +78,61 @@ class MockLocationService : Service() {
     }
 
     private fun startMockForeground(lat: Double, lon: Double) {
-        if (!running) {
-            provider.start()
-            currentLat = lat
-            currentLon = lon
-            running = true
-            handler.post(tick)
-        } else {
-            updateCoords(lat, lon)
+        // ✅ 1. 启动前检查权限，避免在无权限下创建前台服务
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val fine = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            val coarse = checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+            val fgs = if (Build.VERSION.SDK_INT >= 34)
+                checkSelfPermission(android.Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+            else android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if ((fine != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                        coarse != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                || fgs != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                android.util.Log.e("MockLocationService", "缺少前台定位权限，取消启动前台服务")
+                stopSelf()
+                return
+            }
         }
 
+        // ✅ 2. 立即启动前台通知，防止 5 秒超时崩溃
         val notif = buildNotification(lat, lon)
         startForeground(NOTIF_ID, notif)
+
+        // ✅ 3. 启动虚拟定位逻辑
+        try {
+            if (!running) {
+                provider.start()
+                currentLat = lat
+                currentLon = lon
+                running = true
+                handler.post(tick)
+            } else {
+                updateCoords(lat, lon)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MockLocationService", "启动 Mock 定位失败: ${e.message}", e)
+            stopSelf()
+            return
+        }
+
+        // ✅ 4. 再次确认权限有效（部分系统可能在启动后动态回收）
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val fine = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            val coarse = checkSelfPermission(android.Manifest.permission.ACCESS_COARSE_LOCATION)
+            val fgs = if (Build.VERSION.SDK_INT >= 34)
+                checkSelfPermission(android.Manifest.permission.FOREGROUND_SERVICE_LOCATION)
+            else android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if ((fine != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                        coarse != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                || fgs != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                android.util.Log.e("MockLocationService", "启动后权限被回收，停止服务")
+                stopSelf()
+            }
+        }
     }
 
     private fun updateCoords(lat: Double, lon: Double) {

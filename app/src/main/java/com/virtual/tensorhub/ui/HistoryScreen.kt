@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.virtual.tensorhub.mock.MockLocationProvider
+import com.amap.api.maps.model.LatLng
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -41,6 +41,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.draw.blur
 import android.content.Intent
 import android.os.Build
+import androidx.compose.material.icons.filled.LocationOn
 import com.virtual.tensorhub.mock.MockLocationService
 
 // ================================================================
@@ -51,299 +52,216 @@ import com.virtual.tensorhub.mock.MockLocationService
 fun HistoryScreen(navController: NavController) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-
+    
     // ---------- 初始化默认分组 ----------
     var groups by remember { mutableStateOf(loadGroupsWithDefaults(context)) }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var showClearConfirm by remember { mutableStateOf(false) }
     var newGroupName by remember { mutableStateOf("") }
-
+    
+    // Group Picker state
     var showGroupPicker by remember { mutableStateOf(false) }
     var selectedItem by remember { mutableStateOf<HistoryItem?>(null) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF6A11CB), Color(0xFF2575FC))
-                )
-            )
-            .padding(top = statusBarPadding + 12.dp, start = 16.dp, end = 16.dp, bottom = 24.dp)
-    ) {
-        Column(
-            verticalArrangement = Arrangement.spacedBy(18.dp)
-        ) {
-            // ===== 顶部栏 =====
+
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .windowInsetsPadding(WindowInsets.statusBars),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    "历史位置(再次打开时生效)",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                IconButton(
+                 IOSButton(
                     onClick = { navController.popBackStack() },
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = CircleShape,
+                    modifier = Modifier.size(44.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "返回",
-                        tint = Color.White
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack, // Or Icons.Filled.ArrowBack
+                        contentDescription = "Back",
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "History & Favorites",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                 Spacer(modifier = Modifier.weight(1f))
+                 IOSButton(
+                    onClick = { showAddDialog = true },
+                    backgroundColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White,
+                    shape = CircleShape,
+                    modifier = Modifier.size(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = "Add Group",
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
-
-            // ===== 分组列表 =====
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                items(groups) { group ->
-                    GlassCard {
-                        Column(Modifier.padding(16.dp)) {
-                            // 分组标题
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Default.Folder,
-                                        contentDescription = null,
-                                        tint = Color.White.copy(alpha = 0.9f)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 20.dp),
+            contentPadding = PaddingValues(bottom = 60.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            items(groups) { group ->
+                IOSListGroup(title = group.name) {
+                    if (group.locations.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "No items yet",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    } else {
+                        group.locations.forEachIndexed { index, item ->
+                            if (index > 0) HorizontalDivider(color = Color.LightGray.copy(alpha=0.2f), modifier = Modifier.padding(start = 16.dp))
+                            
+                            ListItem(
+                                headlineContent = { Text(item.name, fontWeight = FontWeight.Medium) },
+                                supportingContent = { 
                                     Text(
-                                        "${group.name} (${group.locations.size})",
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp
-                                    )
-                                }
-                                // 删除分组按钮（默认四个分组不能删）
-                                if (group.name !in listOf("历史记录", "校园", "公司", "家")) {
-                                    IconButton(onClick = {
-                                        groups = (groups - group).map { it.copy(locations = it.locations.toMutableList()) }
-                                        saveGroups(context, groups)
-                                    }) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "删除分组",
-                                            tint = Color(0xFFFF7B7B)
-                                        )
+                                        "${String.format("%.4f", item.latitude)}, ${String.format("%.4f", item.longitude)}", 
+                                        color = Color.Gray, 
+                                        fontSize = 12.sp
+                                    ) 
+                                },
+                                leadingContent = {
+                                     Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                         Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                     }
-                                }
-                            }
-
-                            Spacer(Modifier.height(10.dp))
-
-                            // 分组内的历史记录
-                            group.locations.forEach { item ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(Color.White.copy(alpha = 0.1f))
-                                        .border(
-                                            1.dp,
-                                            Color.White.copy(alpha = 0.15f),
-                                            RoundedCornerShape(16.dp)
-                                        )
-                                        .clickable {
-                                            // 保存选择的坐标
-                                            saveVirtualLocation(context, item.latitude, item.longitude)
-
-                                            // 启动前台服务保持长期注入
-                                            val intent = Intent(context, MockLocationService::class.java).apply {
-                                                action = MockLocationService.ACTION_START
-                                                putExtra(MockLocationService.EXTRA_LAT, item.latitude)
-                                                putExtra(MockLocationService.EXTRA_LON, item.longitude)
-                                            }
-                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                                context.startForegroundService(intent)
-                                            } else {
-                                                context.startService(intent)
-                                            }
-
-                                            reverseGeocode(context, item.latitude, item.longitude) { addr ->
-                                                Toast.makeText(context, "已跳转至：$addr", Toast.LENGTH_SHORT).show()
-                                            }
-
-                                            navController.popBackStack()
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(item.name, color = Color.White, fontSize = 16.sp)
-                                        Text(
-                                            "${String.format("%.4f° N", item.latitude)}, ${String.format("%.4f° E", item.longitude)}",
-                                            color = Color.White.copy(alpha = 0.7f),
-                                            fontSize = 13.sp
-                                        )
-                                    }
-                                    Row {
-                                        // “添加到组”功能仅在历史记录组出现
-                                        if (group.name == "历史记录") {
-                                            IconButton(onClick = {
-                                                selectedItem = item
-                                                showGroupPicker = true
-                                            }) {
-                                                Icon(
-                                                    Icons.Default.Folder,
-                                                    contentDescription = "添加到分组",
-                                                    tint = Color(0xFF91E8FF)
-                                                )
-                                            }
-                                        }
-                                        // 删除记录
-                                        IconButton(onClick = {
+                                },
+                                trailingContent = {
+                                    IconButton(
+                                        onClick = {
                                             group.locations.remove(item)
-                                            groups = groups.map { it.copy(locations = it.locations.toMutableList()) } // ✅ 彻底触发重组
+                                            // Trigger recompose manually or simply update state
+                                            val newGroups = groups.map { if (it === group) it.copy(locations = group.locations) else it }
+                                            groups = newGroups
                                             saveGroups(context, groups)
-                                        }) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = "删除记录",
-                                                tint = Color(0xFFFF7B7B)
-                                            )
                                         }
+                                    ) {
+                                        Icon(Icons.Default.Delete, null, tint = Color.LightGray) // Subtle delete
                                     }
-                                }
-                                Spacer(Modifier.height(8.dp))
-                            }
+                                },
+                                modifier = Modifier.clickable {
+                                    // Use location
+                                     navController.previousBackStackEntry
+                                        ?.savedStateHandle
+                                        ?.set("pickedLocation", LatLng(item.latitude, item.longitude))
+                                    navController.popBackStack()
+                                    Toast.makeText(context, "Selected: ${item.name}", Toast.LENGTH_SHORT).show()
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                            )
                         }
                     }
                 }
-
-                // ===== 新建分组按钮 =====
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White.copy(alpha = 0.1f))
-                            .border(
-                                1.dp,
-                                Color.White.copy(alpha = 0.2f),
-                                RoundedCornerShape(20.dp)
-                            )
-                            .clickable { showAddDialog = true }
-                            .padding(vertical = 18.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
-                            Spacer(Modifier.width(6.dp))
-                            Text("新建分组", color = Color.White, fontSize = 16.sp)
-                        }
-                    }
+            }
+            
+            item {
+                TextButton(
+                    onClick = { showClearConfirm = true },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                ) {
+                    Text("Clear All History", color = Color.Red)
                 }
             }
         }
     }
 
-// ===== 新建分组 BottomSheet 弹窗（统一风格）=====
+    // Add Group Dialog
     if (showAddDialog) {
-        ModalBottomSheet(
-            containerColor = Color.Transparent,
-            onDismissRequest = { showAddDialog = false }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.25f),
-                                Color.White.copy(alpha = 0.05f)
-                            )
-                        ),
-                        RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-                    )
-                    .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.3f),
-                        RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-                    )
-                    .padding(horizontal = 24.dp, vertical = 20.dp)
-            ) {
-                Text(
-                    "新建分组",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            title = { Text("New Group") },
+            text = {
+                OutlinedTextField(
+                    value = newGroupName,
+                    onValueChange = { newGroupName = it },
+                    label = { Text("Group Name") },
+                    singleLine = true
                 )
-                Spacer(Modifier.height(16.dp))
-
-                // 🧊 玻璃输入框
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .border(
-                            1.dp,
-                            Color.White.copy(alpha = 0.35f),
-                            RoundedCornerShape(18.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 2.dp)
-                ) {
-                    OutlinedTextField(
-                        value = newGroupName,
-                        onValueChange = { newGroupName = it },
-                        placeholder = {
-                            Text(
-                                "请输入分组名称",
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                        },
-                        textStyle = LocalTextStyle.current.copy(color = Color.White),
-                        singleLine = true,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            cursorColor = Color(0xFF91E8FF),
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = { showAddDialog = false }) {
-                        Text("取消", color = Color.White)
-                    }
-                    TextButton(onClick = {
-                        if (newGroupName.isNotBlank()) {
-                            groups = groups + GroupItem(newGroupName, mutableListOf())
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newGroupName.isNotEmpty()) {
+                            val newGroups = groups.toMutableList()
+                            newGroups.add(GroupItem(newGroupName, mutableListOf()))
+                            groups = newGroups
                             saveGroups(context, groups)
                             newGroupName = ""
                             showAddDialog = false
-                        } else {
-                            Toast.makeText(context, "名称不能为空", Toast.LENGTH_SHORT).show()
                         }
-                    }) {
-                        Text("确定", color = Color(0xFF91E8FF), fontWeight = FontWeight.Bold)
                     }
+                ) {
+                    Text("Create")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) {
+                    Text("Cancel")
                 }
             }
-        }
+        )
+    }
+
+    // Clear Confirm Dialog
+    if (showClearConfirm) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirm = false },
+            title = { Text("Clear All?") },
+            text = { Text("This will delete all saved locations.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                         val defaults = loadGroupsWithDefaults(context).filter { it.name != "历史记录" } // Keep defaults maybe? or reset all
+                         // Assuming reset to defaults
+                         val reset = listOf(GroupItem("历史记录", mutableListOf())) + 
+                             listOf("校园", "公司", "家").map { GroupItem(it, mutableListOf()) }
+                         groups = reset
+                         saveGroups(context, groups)
+                         showClearConfirm = false
+                    }
+                ) {
+                    Text("Delete All", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                 TextButton(onClick = { showClearConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     // ===== 添加到分组弹窗 =====
@@ -374,10 +292,21 @@ fun HistoryScreen(navController: NavController) {
                             .background(Color.White.copy(alpha = 0.1f))
                             .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
                             .clickable {
-                                g.locations.add(selectedItem!!)
+                                val item = selectedItem!!
+                                val exists = g.locations.any {
+                                    it.latitude == item.latitude && it.longitude == item.longitude
+                                }
+
+                                if (exists) {
+                                    Toast.makeText(context, "该地址已存在于 ${g.name}", Toast.LENGTH_SHORT).show()
+                                    return@clickable
+                                }
+
+                                g.locations.add(item)
                                 groups = groups.map { it.copy(locations = it.locations.toMutableList()) }
                                 saveGroups(context, groups)
-                                Toast.makeText(context, "已添加到 ${g.name}", Toast.LENGTH_SHORT).show()
+                                groups = groups.toMutableList() // ✅ 强制刷新
+                                Toast.makeText(context, "已将地址添加到 ${g.name}", Toast.LENGTH_SHORT).show()
                                 showGroupPicker = false
                             }
                             .padding(vertical = 12.dp, horizontal = 16.dp)
@@ -458,4 +387,18 @@ fun saveGroups(context: Context, groups: List<GroupItem>) {
     }
     val sp = context.getSharedPreferences("virtual_prefs", Context.MODE_PRIVATE)
     sp.edit().putString("history_groups", arr.toString()).apply()
+}
+
+// Add helper function to save history
+fun saveHistory(context: Context, name: String, address: String?, latLng: LatLng) {
+    val groups = loadGroupsWithDefaults(context)
+    val historyGroup = groups.find { it.name == "历史记录" } 
+        ?: groups.firstOrNull() 
+        ?: return
+
+    // Avoid duplicates
+    if (historyGroup.locations.none { it.latitude == latLng.latitude && it.longitude == latLng.longitude }) {
+        historyGroup.locations.add(0, HistoryItem(name, latLng.latitude, latLng.longitude))
+        saveGroups(context, groups)
+    }
 }

@@ -11,7 +11,6 @@
     <!-- ✅ 定位权限组 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <!-- ✅ 前台服务权限 -->
@@ -57,12 +56,15 @@
         <!-- ✅ 高德地图 API Key 必须放在 Application 内 -->
         <meta-data
             android:name="com.amap.api.v2.apikey"
-            android:value="bc2c93e35cac9d5d3007f54d76a155fd" />
+            android:value="YOUR_AMAP_API_KEY" />
+
 
         <!-- ✅ 主界面 Activity -->
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:screenOrientation="unspecified">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

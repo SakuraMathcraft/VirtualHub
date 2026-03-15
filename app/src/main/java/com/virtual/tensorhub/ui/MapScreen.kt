@@ -10,12 +10,19 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -51,6 +58,10 @@ fun MapScreen(navController: NavController) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember { MapView(context) }
     var aMap by remember { mutableStateOf<AMap?>(null) }
+
+    // 🧭 图层切换浮动按钮
+    var currentType by remember { mutableStateOf(AMap.MAP_TYPE_NORMAL) }
+    var trafficEnabled by remember { mutableStateOf(false) }
 
     // ✅ 生命周期绑定
     DisposableEffect(lifecycleOwner) {
@@ -128,6 +139,19 @@ fun MapScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         aMap = mapView.map
         aMap?.apply {
+            // ✅ 恢复上次图层设置
+            val prefs = context.getSharedPreferences("map_prefs", android.content.Context.MODE_PRIVATE)
+            val lastType = prefs.getInt("map_type", AMap.MAP_TYPE_NORMAL)
+            val lastTraffic = prefs.getBoolean("traffic_enabled", false)
+
+            mapType = lastType
+            isTrafficEnabled = lastTraffic
+
+            currentType = lastType          // ✅ 同步到 Compose 状态
+            trafficEnabled = lastTraffic    // ✅ 同步到 Compose 状态
+
+            Log.d("MapScreen", "恢复上次图层设置: type=$lastType, traffic=$lastTraffic")
+
             uiSettings.isZoomControlsEnabled = true
             uiSettings.isMyLocationButtonEnabled = true
 
@@ -194,6 +218,61 @@ fun MapScreen(navController: NavController) {
         }
     }
 
-    AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
-    BackHandler { navController.popBackStack() }
+    Box(modifier = Modifier.fillMaxSize()) {
+        AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
+
+        FloatingActionButton(
+            onClick = {
+                val map = aMap ?: return@FloatingActionButton
+                when (currentType) {
+                    AMap.MAP_TYPE_NORMAL -> {
+                        map.mapType = AMap.MAP_TYPE_SATELLITE
+                        map.isTrafficEnabled = false
+                        currentType = AMap.MAP_TYPE_SATELLITE
+                        Toast.makeText(context, "🛰️ 切换到卫星地图", Toast.LENGTH_SHORT).show()
+                    }
+                    AMap.MAP_TYPE_SATELLITE -> {
+                        map.mapType = AMap.MAP_TYPE_NIGHT
+                        map.isTrafficEnabled = false
+                        currentType = AMap.MAP_TYPE_NIGHT
+                        Toast.makeText(context, "🌙 切换到夜间地图", Toast.LENGTH_SHORT).show()
+                    }
+                    AMap.MAP_TYPE_NIGHT -> {
+                        map.mapType = AMap.MAP_TYPE_NORMAL
+                        map.isTrafficEnabled = true
+                        currentType = AMap.MAP_TYPE_NORMAL
+                        Toast.makeText(context, "🚗 显示标准地图 + 实时交通", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                // ✅ 保存当前模式
+                val prefs = context.getSharedPreferences("map_prefs", android.content.Context.MODE_PRIVATE)
+                prefs.edit()
+                    .putInt("map_type", currentType)
+                    .putBoolean("traffic_enabled", map.isTrafficEnabled)
+                    .apply()
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 90.dp, end = 16.dp),
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ) {
+            Icon(Icons.Default.Layers, contentDescription = "图层切换")
+        }
+
+        // 🔙 返回键
+        BackHandler { navController.popBackStack() }
+        // 🧭 左上角返回按钮
+        FloatingActionButton(
+            onClick = { navController.popBackStack() },
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 90.dp, start = 16.dp),
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+        }
+    }
 }
