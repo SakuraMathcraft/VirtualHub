@@ -1,6 +1,6 @@
-# TensorHub
+# VitualHub
 
-TensorHub 是一个 Android 虚拟定位与路径模拟应用，基于 Kotlin + Jetpack Compose 构建。
+VitualHub 是一个 Android 虚拟定位与路径模拟应用，基于 Kotlin + Jetpack Compose 构建。
 
 ## 功能概览
 
